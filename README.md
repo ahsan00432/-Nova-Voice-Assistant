@@ -34,14 +34,15 @@ python -m venv .venv
 
 ## Configure And Run
 
-Create an API key in your Groq account. Set it in the same PowerShell window used to run Nova. Do not put API keys in source files or commit them to GitHub.
+Create an API key in your Groq account. Copy the example config and enter your key in `config.json`:
 
 ```powershell
-$env:GROQ_API_KEY = 'YOUR_GROQ_API_KEY'
+Copy-Item .\config.example.json .\config.json
+notepad .\config.json
 .\.venv\Scripts\python.exe .\nova_assistant.py
 ```
 
-The environment variable lasts for the current terminal session. Set it again when opening a new terminal.
+Set the `groq_api_key` value in the JSON file. The file is excluded by `.gitignore`; never commit it or share it. Nova also accepts `GROQ_API_KEY`, which takes precedence over the config file.
 
 Nova defaults to `openai/gpt-oss-120b`. To use another model available to your account, set `GROQ_MODEL` before launching:
 
@@ -49,6 +50,19 @@ Nova defaults to `openai/gpt-oss-120b`. To use another model available to your a
 $env:GROQ_MODEL = 'your-groq-model-id'
 .\.venv\Scripts\python.exe .\nova_assistant.py
 ```
+
+## Build A Standalone Windows App
+
+Install PyInstaller into the project environment and build a single-file, windowed executable:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install pyinstaller
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name standalone --collect-all pyttsx3 --collect-all comtypes .\nova_assistant.py
+Copy-Item .\config.json .\dist\config.json -Force
+.\dist\standalone.exe
+```
+
+The build is written to `dist\standalone.exe`. Keep `config.json` beside the executable. It is read at runtime and is not embedded in the executable, so the same build can use a different key without rebuilding. Do not publish the config file.
 
 ## Use The App
 
@@ -63,7 +77,7 @@ On Windows, conversations are saved as JSON in `%APPDATA%\Nova\chat_history.json
 
 ## Troubleshooting
 
-- **API key error:** Verify `GROQ_API_KEY` is set in the terminal launching Nova and that the key is active. Revoke any key that has been shared or committed.
+- **API key error:** Check `groq_api_key` in `config.json`, or verify `GROQ_API_KEY` is set in the launching terminal. Revoke any key that has been shared or committed.
 - **Model not found:** Confirm `GROQ_MODEL` is a model available to your Groq account. Remove an old override with `Remove-Item Env:GROQ_MODEL` to use the default.
 - **Cloudflare error 1010:** Nova displays the Cloudflare Ray ID when available. If the error continues, contact Groq support and include that ID.
 - **No speech:** Reinstall dependencies with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` and check that Windows has an available speech voice and audio output device.

@@ -2,6 +2,7 @@ import json
 import math
 import os
 import queue
+import sys
 import threading
 import time
 import tkinter as tk
@@ -16,11 +17,33 @@ from uuid import uuid4
 
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
-API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 SYSTEM_PROMPT = (
     "You are Nova, a capable, composed voice assistant. "
     "Be natural, concise, and useful. Speak plainly and avoid markdown tables."
 )
+
+
+def load_api_key(config_path: Path | None = None) -> str:
+    environment_key = os.getenv("GROQ_API_KEY", "").strip()
+    if environment_key:
+        return environment_key
+
+    if config_path is None:
+        app_directory = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+        config_path = app_directory / "config.json"
+
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+
+    if not isinstance(config, dict):
+        return ""
+    api_key = config.get("groq_api_key", "")
+    return api_key.strip() if isinstance(api_key, str) else ""
+
+
+API_KEY = load_api_key()
 
 
 class NovaAssistant:
@@ -48,7 +71,7 @@ class NovaAssistant:
         self._build_ui()
         self._set_status("READY" if self.api_key else "KEY MISSING")
         if not self.api_key:
-            self.current_word = "SET GROQ_API_KEY TO CONNECT"
+            self.current_word = "ADD KEY TO CONFIG.JSON"
 
         self.root.after(50, self._poll_events)
         self._animate()
@@ -365,7 +388,7 @@ class NovaAssistant:
             return
         if not self.api_key:
             self._set_status("KEY MISSING")
-            self.current_word = "SET GROQ_API_KEY TO CONNECT"
+            self.current_word = "ADD KEY TO CONFIG.JSON"
             return
 
         self.input_entry.delete(0, "end")
